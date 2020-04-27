@@ -37,7 +37,6 @@ import org.eclipse.che.workspace.infrastructure.kubernetes.StartSynchronizerFact
 import org.eclipse.che.workspace.infrastructure.kubernetes.cache.KubernetesMachineCache;
 import org.eclipse.che.workspace.infrastructure.kubernetes.cache.KubernetesRuntimeStateCache;
 import org.eclipse.che.workspace.infrastructure.kubernetes.namespace.pvc.WorkspaceVolumesStrategy;
-import org.eclipse.che.workspace.infrastructure.kubernetes.provision.AsyncStorageProvisioner;
 import org.eclipse.che.workspace.infrastructure.kubernetes.util.KubernetesSharedPool;
 import org.eclipse.che.workspace.infrastructure.kubernetes.util.RuntimeEventsPublisher;
 import org.eclipse.che.workspace.infrastructure.kubernetes.util.UnrecoverablePodEventListenerFactory;
@@ -53,8 +52,8 @@ import org.eclipse.che.workspace.infrastructure.openshift.server.OpenShiftServer
  */
 public class OpenShiftInternalRuntime extends KubernetesInternalRuntime<OpenShiftEnvironment> {
 
-  private final AsyncStorageProvisioner asyncStorageProvisioner;
   private final OpenShiftProject project;
+  private final AsyncStorageProvisioner asyncStorageProvisioner;
 
   @Inject
   public OpenShiftInternalRuntime(
@@ -76,8 +75,8 @@ public class OpenShiftInternalRuntime extends KubernetesInternalRuntime<OpenShif
       SidecarToolingProvisioner<OpenShiftEnvironment> toolingProvisioner,
       RuntimeHangingDetector runtimeHangingDetector,
       OpenShiftPreviewUrlCommandProvisioner previewUrlCommandProvisioner,
-      Tracer tracer,
       AsyncStorageProvisioner asyncStorageProvisioner,
+      Tracer tracer,
       @Assisted OpenShiftRuntimeContext context,
       @Assisted OpenShiftProject project) {
     super(

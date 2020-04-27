@@ -46,7 +46,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
 /**
- * Tests {@link VcsSshKeysProvisioner}.
+ * Tests {@link SshKeysProvisioner}.
  *
  * @author Vitalii Parfonov
  * @author Vlad Zhukovskyi
@@ -67,7 +67,7 @@ public class VcsSshKeySecretProvisionerTest {
 
   private final String someUser = "someuser";
 
-  private VcsSshKeysProvisioner vcsSshKeysProvisioner;
+  private SshKeysProvisioner sshKeysProvisioner;
 
   @BeforeMethod
   public void setup() {
@@ -81,7 +81,7 @@ public class VcsSshKeySecretProvisionerTest {
     when(podSpec.getContainers()).thenReturn(Collections.singletonList(container));
     when(container.getVolumeMounts()).thenReturn(new ArrayList<>());
     k8sEnv.addPod(pod);
-    vcsSshKeysProvisioner = new VcsSshKeysProvisioner(sshManager);
+    sshKeysProvisioner = new SshKeysProvisioner(sshManager);
   }
 
   @Test
@@ -92,7 +92,7 @@ public class VcsSshKeySecretProvisionerTest {
             new SshPairImpl(
                 someUser, "vcs", "default-" + UUID.randomUUID().toString(), "public", "private"));
 
-    vcsSshKeysProvisioner.provision(k8sEnv, runtimeIdentity);
+    sshKeysProvisioner.provision(k8sEnv, runtimeIdentity);
 
     assertEquals(k8sEnv.getSecrets().size(), 1);
   }
@@ -109,7 +109,7 @@ public class VcsSshKeySecretProvisionerTest {
                 new SshPairImpl(someUser, "vcs", keyName2, "public", "private"),
                 new SshPairImpl(someUser, "vcs", keyName3, "public", "private")));
 
-    vcsSshKeysProvisioner.provision(k8sEnv, runtimeIdentity);
+    sshKeysProvisioner.provision(k8sEnv, runtimeIdentity);
 
     verify(podSpec, times(2)).getVolumes();
     verify(podSpec, times(2)).getContainers();
@@ -192,7 +192,7 @@ public class VcsSshKeySecretProvisionerTest {
     k8sEnv.addInjectablePod("r", "i", injectedPod);
 
     // when
-    vcsSshKeysProvisioner.provision(k8sEnv, runtimeIdentity);
+    sshKeysProvisioner.provision(k8sEnv, runtimeIdentity);
 
     // then
     assertEquals(pod.getSpec().getVolumes().size(), 2);

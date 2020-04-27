@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -69,7 +70,7 @@ import org.slf4j.LoggerFactory;
  * @author Vitalii Parfonov
  * @author Vlad Zhukovskyi
  */
-public class VcsSshKeysProvisioner implements ConfigurationProvisioner<KubernetesEnvironment> {
+public class SshKeysProvisioner implements ConfigurationProvisioner<KubernetesEnvironment> {
 
   private static String SSH_BASE_CONFIG_PATH = "/etc/ssh/";
 
@@ -84,12 +85,12 @@ public class VcsSshKeysProvisioner implements ConfigurationProvisioner<Kubernete
 
   private static final String SSH_SECRET_TYPE = "opaque";
 
-  private static final Logger LOG = LoggerFactory.getLogger(VcsSshKeysProvisioner.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SshKeysProvisioner.class);
 
   private final SshManager sshManager;
 
   @Inject
-  public VcsSshKeysProvisioner(SshManager sshManager) {
+  public SshKeysProvisioner(SshManager sshManager) {
     this.sshManager = sshManager;
   }
 
@@ -99,12 +100,32 @@ public class VcsSshKeysProvisioner implements ConfigurationProvisioner<Kubernete
       throws InfrastructureException {
     TracingTags.WORKSPACE_ID.set(identity::getWorkspaceId);
 
+    List<SshPairImpl> sshPairs = getVcsSshPairs(identity);
+    List<SshPairImpl> systemSshPairs = getSystemSshPairs(identity);
+
+    List<SshPairImpl> all = new ArrayList<>(sshPairs);
+    if (systemSshPairs != null) {
+      all.addAll(systemSshPairs);
+    }
+
+    doProvisionSshKeys(all, k8sEnv, identity.getWorkspaceId());
+
+    StringBuilder sshConfigData = new StringBuilder();
+    for (SshPair sshPair : sshPairs) {
+      sshConfigData.append(buildConfig(sshPair.getName()));
+    }
+
+    String sshConfigMapName = identity.getWorkspaceId() + SSH_CONFIG_MAP_NAME_SUFFIX;
+    doProvisionSshConfig(sshConfigMapName, sshConfigData.toString(), k8sEnv);
+  }
+
+  private List<SshPairImpl> getVcsSshPairs(RuntimeIdentity identity) {
     List<SshPairImpl> sshPairs;
     try {
       sshPairs = sshManager.getPairs(identity.getOwnerId(), "vcs");
     } catch (ServerException e) {
       LOG.warn("Unable to get SSH Keys. Cause: {}", e.getMessage());
-      return;
+      return null;
     }
     if (sshPairs.isEmpty()) {
       try {
@@ -114,19 +135,21 @@ public class VcsSshKeysProvisioner implements ConfigurationProvisioner<Kubernete
                     identity.getOwnerId(), "vcs", "default-" + new Date().getTime()));
       } catch (ServerException | ConflictException e) {
         LOG.warn("Unable to generate the initial SSH key. Cause: {}", e.getMessage());
-        return;
+        return null;
       }
     }
+    return sshPairs;
+  }
 
-    doProvisionSshKeys(sshPairs, k8sEnv, identity.getWorkspaceId());
-
-    StringBuilder sshConfigData = new StringBuilder();
-    for (SshPair sshPair : sshPairs) {
-      sshConfigData.append(buildConfig(sshPair.getName()));
+  private List<SshPairImpl> getSystemSshPairs(RuntimeIdentity identity) {
+    List<SshPairImpl> sshPairs;
+    try {
+      sshPairs = sshManager.getPairs(identity.getOwnerId(), "internal");
+    } catch (ServerException e) {
+      LOG.warn("Unable to get SSH Keys. Cause: {}", e.getMessage());
+      return null;
     }
-
-    String sshConfigMapName = identity.getWorkspaceId() + SSH_CONFIG_MAP_NAME_SUFFIX;
-    doProvisionSshConfig(sshConfigMapName, sshConfigData.toString(), k8sEnv);
+    return sshPairs;
   }
 
   private void doProvisionSshKeys(
