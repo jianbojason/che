@@ -66,8 +66,8 @@ public class AsyncStorageProvisioner {
   private static final String SSH_KEY_NAME = "rsync-via-ssh";
   private static final String CONFIG_MAP_VOLUME_NAME = "async-storage-configvolume";
   private static final String ASYNC_STORAGE_CONFIG = "async-storage-config";
-  private static final String RSYNC = "rsync.pub";
-  private static final String SSH_KEY_PATH = "/etc/ssh/" + RSYNC;
+  private static final String RSYNC = "authorized_keys";
+  private static final String SSH_KEY_PATH = "/.ssh/" + RSYNC;
   private static final String STORAGE = "storage";
   private static final String STORAGE_DATA_PATH = "/var/lib/storage/data/";
   private static final String STORAGE_DATA = "storage-data";
