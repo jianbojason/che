@@ -11,14 +11,12 @@
  */
 package org.eclipse.che.workspace.infrastructure.openshift;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.String.valueOf;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.ConfigMapVolumeSourceBuilder;
@@ -28,9 +26,6 @@ import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.IntOrStringBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaimFluent.SpecNested;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
@@ -50,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
+import javax.inject.Named;
 import org.eclipse.che.api.core.ConflictException;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.model.workspace.runtime.RuntimeIdentity;
@@ -63,23 +59,31 @@ import org.slf4j.LoggerFactory;
 
 public class AsyncStorageProvisioner {
 
+  private static final int SERVICE_PORT = 2222;
   private static final String SSH_KEY_NAME = "rsync-via-ssh";
   private static final String CONFIG_MAP_VOLUME_NAME = "async-storage-configvolume";
   private static final String ASYNC_STORAGE_CONFIG = "async-storage-config";
-  private static final String RSYNC = "authorized_keys";
-  private static final String SSH_KEY_PATH = "/.ssh/" + RSYNC;
+  private static final String AUTHORIZED_KEYS = "authorized_keys";
+  private static final String SSH_KEY_PATH = "/.ssh/" + AUTHORIZED_KEYS;
   private static final String STORAGE = "storage";
   private static final String STORAGE_DATA_PATH = "/var/lib/storage/data/";
   private static final String STORAGE_DATA = "storage-data";
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncStorageProvisioner.class);
 
+  private final String     pvcName;
+  private final String     storageImage;
   private final SshManager sshManager;
   private final OpenShiftClientFactory clientFactory;
 
   @Inject
   public AsyncStorageProvisioner(
-      SshManager sshManager, OpenShiftClientFactory openShiftClientFactory) {
+      @Named("che.infra.kubernetes.pvc.name") String pvcName,
+      @Named("che.infra.kubernetes.async.storage.image") String image,
+      SshManager sshManager,
+      OpenShiftClientFactory openShiftClientFactory) {
+    this.pvcName = pvcName;
+    this.storageImage = image;
     this.sshManager = sshManager;
     this.clientFactory = openShiftClientFactory;
   }
@@ -109,22 +113,6 @@ public class AsyncStorageProvisioner {
     if (!isMapExist) {
       ConfigMap configMap = createConfigMap(namespace, configMapName, sshPair);
       oc.configMaps().inNamespace(namespace).create(configMap);
-    }
-
-    boolean isPvcExist =
-        oc.persistentVolumeClaims()
-            .inNamespace(namespace)
-            .list()
-            .getItems()
-            .stream()
-            .anyMatch(
-                (Predicate<PersistentVolumeClaim>)
-                    persistentVolumeClaim ->
-                        persistentVolumeClaim.getMetadata().getName().equals(STORAGE_DATA));
-
-    if (!isPvcExist) {
-      PersistentVolumeClaim pvc = createPVC(namespace, "ReadWriteMany", null);
-      oc.persistentVolumeClaims().inNamespace(namespace).create(pvc);
     }
 
     boolean isPodExist =
@@ -168,7 +156,7 @@ public class AsyncStorageProvisioner {
         sshPairs =
             singletonList(sshManager.generatePair(identity.getOwnerId(), "internal", SSH_KEY_NAME));
       } catch (ServerException | ConflictException e) {
-        LOG.warn("Unable to generate the initial SSH key. Cause: {}", e.getMessage());
+        LOG.warn("Unable to generate the SSH key for async storage service. Cause: {}", e.getMessage());
         return null;
       }
     }
@@ -177,7 +165,7 @@ public class AsyncStorageProvisioner {
 
   private ConfigMap createConfigMap(String namespace, String configMapName, SshPair sshPair) {
     Map<String, String> sshConfigData = new HashMap<>();
-    sshConfigData.put(RSYNC, sshPair.getPublicKey());
+    sshConfigData.put(AUTHORIZED_KEYS, sshPair.getPublicKey());
     ConfigMap configMap =
         new ConfigMapBuilder()
             .withNewMetadata()
@@ -187,27 +175,6 @@ public class AsyncStorageProvisioner {
             .withData(sshConfigData)
             .build();
     return configMap;
-  }
-
-  private PersistentVolumeClaim createPVC(
-      String namespace, String accessMode, String storageClassName) {
-    SpecNested<PersistentVolumeClaimBuilder> specs =
-        new PersistentVolumeClaimBuilder()
-            .withNewMetadata()
-            .withName(STORAGE_DATA)
-            .withNamespace(namespace)
-            .endMetadata()
-            .withNewSpec()
-            .withAccessModes(accessMode);
-    if (!isNullOrEmpty(storageClassName)) {
-      specs.withStorageClassName(storageClassName);
-    }
-    return specs
-        .withNewResources()
-        .withRequests(ImmutableMap.of("storage", new Quantity("10Gi")))
-        .endResources()
-        .endSpec()
-        .build();
   }
 
   private Pod createStoragePod(String namespace, String configMap) {
@@ -220,10 +187,10 @@ public class AsyncStorageProvisioner {
             .withReadOnly(false)
             .build();
 
-    VolumeMount rsyncSshVolumeMount =
+    VolumeMount sshVolumeMount =
         new VolumeMountBuilder()
             .withMountPath(SSH_KEY_PATH)
-            .withSubPath(RSYNC)
+            .withSubPath(AUTHORIZED_KEYS)
             .withName(CONFIG_MAP_VOLUME_NAME)
             .withReadOnly(true)
             .build();
@@ -231,14 +198,14 @@ public class AsyncStorageProvisioner {
     Container container =
         new ContainerBuilder()
             .withName(containerName)
-            .withImage("vparfonov/che-data-sync-pod:latest")
+            .withImage(storageImage)
             .withNewResources()
             .addToLimits("memory", new Quantity("512Mi"))
             .addToRequests("memory", new Quantity("256Mi"))
             .endResources()
             .withPorts(
-                new ContainerPortBuilder().withContainerPort(2222).withProtocol("TCP").build())
-            .withVolumeMounts(storageVolumeMount, rsyncSshVolumeMount)
+                new ContainerPortBuilder().withContainerPort(SERVICE_PORT).withProtocol("TCP").build())
+            .withVolumeMounts(storageVolumeMount, sshVolumeMount)
             .build();
 
     Volume storageVolume =
@@ -246,7 +213,7 @@ public class AsyncStorageProvisioner {
             .withName(STORAGE_DATA)
             .withPersistentVolumeClaim(
                 new PersistentVolumeClaimVolumeSourceBuilder()
-                    .withClaimName(STORAGE_DATA)
+                    .withClaimName(pvcName)
                     .withReadOnly(false)
                     .build())
             .build();
@@ -281,13 +248,13 @@ public class AsyncStorageProvisioner {
     meta.setNamespace(namespace);
 
     IntOrString targetPort =
-        new IntOrStringBuilder().withIntVal(2222).withStrVal(valueOf(2222)).build();
+        new IntOrStringBuilder().withIntVal(SERVICE_PORT).withStrVal(valueOf(SERVICE_PORT)).build();
 
     ServicePort port =
         new ServicePortBuilder()
             .withName("2222")
             .withProtocol("TCP")
-            .withPort(2222)
+            .withPort(SERVICE_PORT)
             .withTargetPort(targetPort)
             .build();
     ServiceSpec spec = new ServiceSpec();
