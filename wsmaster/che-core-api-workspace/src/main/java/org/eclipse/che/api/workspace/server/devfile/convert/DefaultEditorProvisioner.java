@@ -15,6 +15,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.che.api.workspace.server.devfile.Constants.EDITOR_COMPONENT_TYPE;
 import static org.eclipse.che.api.workspace.server.devfile.Constants.EDITOR_FREE_DEVFILE_ATTRIBUTE;
 import static org.eclipse.che.api.workspace.server.devfile.Constants.PLUGIN_COMPONENT_TYPE;
+import static org.eclipse.che.api.workspace.shared.Constants.ASYNC_PERSIST_ATTRIBUTE;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,7 @@ import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 import org.eclipse.che.api.workspace.server.spi.InfrastructureException;
 import org.eclipse.che.api.workspace.server.wsplugins.PluginFQNParser;
 import org.eclipse.che.api.workspace.server.wsplugins.model.ExtendedPluginFQN;
+import org.eclipse.che.api.workspace.shared.Constants;
 
 /**
  * Provision default editor if there is no any another editor and default plugins for it.
@@ -101,6 +103,9 @@ public class DefaultEditorProvisioner {
 
     if (isDefaultEditorUsed) {
       provisionDefaultPlugins(components, contentProvider);
+    }
+    if ("true".equals(devfile.getAttributes().get(ASYNC_PERSIST_ATTRIBUTE))) {
+      provisionAsyncStoragePlugin();
     }
   }
 
