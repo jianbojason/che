@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * Lifecycle describes actions that the management system should take in response to container
+ * LifecycleImpl describes actions that the management system should take in response to container
  * lifecycle events.
  *
  * <p>For the PostStart and PreStop lifecycle handlers, management of the container blocks until the
@@ -88,6 +88,6 @@ public class Lifecycle {
 
   @Override
   public String toString() {
-    return "Lifecycle{" + "postStart=" + postStart + ", preStop=" + preStop + '}';
+    return "LifecycleImpl{" + "postStart=" + postStart + ", preStop=" + preStop + '}';
   }
 }

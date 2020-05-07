@@ -149,4 +149,9 @@ public interface Component {
    * type.
    */
   List<? extends Endpoint> getEndpoints();
+
+  /**
+   * Returns lifecycle configuration.
+   */
+  Lifecycle getLifecycle();
 }
