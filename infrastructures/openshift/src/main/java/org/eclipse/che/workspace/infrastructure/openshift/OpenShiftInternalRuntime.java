@@ -11,6 +11,9 @@
  */
 package org.eclipse.che.workspace.infrastructure.openshift;
 
+import static org.eclipse.che.api.workspace.shared.Constants.ASYNC_PERSIST_ATTRIBUTE;
+import static org.eclipse.che.workspace.infrastructure.kubernetes.namespace.pvc.EphemeralWorkspaceUtility.isEphemeral;
+
 import com.google.inject.assistedinject.Assisted;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
@@ -36,6 +39,7 @@ import org.eclipse.che.workspace.infrastructure.kubernetes.RuntimeHangingDetecto
 import org.eclipse.che.workspace.infrastructure.kubernetes.StartSynchronizerFactory;
 import org.eclipse.che.workspace.infrastructure.kubernetes.cache.KubernetesMachineCache;
 import org.eclipse.che.workspace.infrastructure.kubernetes.cache.KubernetesRuntimeStateCache;
+import org.eclipse.che.workspace.infrastructure.kubernetes.namespace.pvc.EphemeralWorkspaceUtility;
 import org.eclipse.che.workspace.infrastructure.kubernetes.namespace.pvc.WorkspaceVolumesStrategy;
 import org.eclipse.che.workspace.infrastructure.kubernetes.util.KubernetesSharedPool;
 import org.eclipse.che.workspace.infrastructure.kubernetes.util.RuntimeEventsPublisher;
@@ -111,7 +115,10 @@ public class OpenShiftInternalRuntime extends KubernetesInternalRuntime<OpenShif
   protected void startMachines() throws InfrastructureException {
     OpenShiftEnvironment osEnv = getContext().getEnvironment();
     String workspaceId = getContext().getIdentity().getWorkspaceId();
-    asyncStorageProvisioner.provision(getContext().getIdentity());
+    if (isEphemeral(osEnv.getAttributes())
+        && "true".equals(osEnv.getAttributes().get(ASYNC_PERSIST_ATTRIBUTE))) {
+      asyncStorageProvisioner.provision(getContext().getIdentity());
+    }
     createSecrets(osEnv, workspaceId);
     createConfigMaps(osEnv, workspaceId);
     List<Service> createdServices = createServices(osEnv, workspaceId);
