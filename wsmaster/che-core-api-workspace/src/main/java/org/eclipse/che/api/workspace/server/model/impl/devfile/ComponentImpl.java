@@ -25,7 +25,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.ElementCollection;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -38,7 +37,6 @@ import org.eclipse.che.api.core.model.workspace.devfile.Component;
 import org.eclipse.che.api.core.model.workspace.devfile.Endpoint;
 import org.eclipse.che.api.core.model.workspace.devfile.Entrypoint;
 import org.eclipse.che.api.core.model.workspace.devfile.Env;
-import org.eclipse.che.api.core.model.workspace.devfile.Lifecycle;
 import org.eclipse.che.api.core.model.workspace.devfile.Volume;
 import org.eclipse.che.api.workspace.server.devfile.PreferencesDeserializer;
 import org.eclipse.che.api.workspace.server.devfile.SerializableConverter;
@@ -137,8 +135,6 @@ public class ComponentImpl implements Component {
   @JoinColumn(name = "devfile_component_id")
   private List<EndpointImpl> endpoints;
 
-  @Embedded private Lifecycle lifecycle;
-
   public ComponentImpl() {}
 
   public ComponentImpl(String type, String id) {
@@ -194,8 +190,8 @@ public class ComponentImpl implements Component {
       List<String> args,
       List<? extends Volume> volumes,
       List<? extends Env> env,
-      List<? extends Endpoint> endpoints,
-      Lifecycle lifecycle) {
+      List<? extends Endpoint> endpoints) {
+      //Lifecycle lifecycle) {
     this.alias = alias;
     this.type = type;
     this.componentId = id;
@@ -230,7 +226,6 @@ public class ComponentImpl implements Component {
       this.endpoints =
           endpoints.stream().map(EndpointImpl::new).collect(toCollection(ArrayList::new));
     }
-    this.lifecycle = lifecycle;
   }
 
   public ComponentImpl(Component component) {
@@ -254,8 +249,7 @@ public class ComponentImpl implements Component {
         component.getArgs(),
         component.getVolumes(),
         component.getEnv(),
-        component.getEndpoints(),
-        component.getLifecycle());
+        component.getEndpoints());
   }
 
   @Override
@@ -462,15 +456,6 @@ public class ComponentImpl implements Component {
   }
 
   @Override
-  public Lifecycle getLifecycle() {
-    return lifecycle;
-  }
-
-  public void setLifecycle(Lifecycle lifecycle) {
-    this.lifecycle = lifecycle;
-  }
-
-  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -496,8 +481,7 @@ public class ComponentImpl implements Component {
         && Objects.equals(getArgs(), component.getArgs())
         && Objects.equals(getVolumes(), component.getVolumes())
         && Objects.equals(getEnv(), component.getEnv())
-        && Objects.equals(getEndpoints(), component.getEndpoints())
-        && Objects.equals(getLifecycle(), component.getLifecycle());
+        && Objects.equals(getEndpoints(), component.getEndpoints());
   }
 
   @Override
@@ -521,8 +505,7 @@ public class ComponentImpl implements Component {
         getArgs(),
         getVolumes(),
         getEnv(),
-        getEndpoints(),
-        getLifecycle());
+        getEndpoints());
   }
 
   @Override
