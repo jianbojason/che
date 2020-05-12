@@ -123,17 +123,17 @@ public final class Constants {
 
 
   /**
-   * The attribute allows to configure workspace to be ephemeral with no PVC attached on K8S /
-   * OpenShift infrastructure. Should be set/read from {@link WorkspaceConfig#getAttributes}.
+   * The attribute allows to configure workspace with async storage support this configuration.
+   * Make sense only in case org.eclipse.che.api.workspace.shared.Constants#PERSIST_VOLUMES_ATTRIBUTE
+   * set to 'false'.
+   * 
+   * Should be set/read from {@link WorkspaceConfig#getAttributes}.
    *
-   * <p>Value is expected to be boolean, and if set to 'false' regardless of the PVC strategy,
-   * workspace volumes would be created as `emptyDir`. When a workspace Pod is removed for any
-   * reason, the data in the `emptyDir` volume is deleted forever
+   * <p>Value is expected to be boolean, and if set to 'true' special plugin will be added to 
+   * workspace. It will provide ability to backup/restore project source to the async storage.
+   * Workspace volumes still would be created as `emptyDir`. During stopping workspace project source
+   * will be sent to the storage Pod and restore from it on next restarts.  
    *
-   * @see <a
-   *     href="https://www.eclipse.org/che/docs/kubernetes-admin-guide.html#che-workspaces-storage">Che
-   *     PVC strategies</a>
-   * @see <a href="https://kubernetes.io/docs/concepts/storage/volumes/#emptydir">emptyDir</a>
    */
   public static final String ASYNC_PERSIST_ATTRIBUTE = "asyncPersist";
 
