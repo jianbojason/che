@@ -34,7 +34,6 @@ import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 import org.eclipse.che.api.workspace.server.spi.InfrastructureException;
 import org.eclipse.che.api.workspace.server.wsplugins.PluginFQNParser;
 import org.eclipse.che.api.workspace.server.wsplugins.model.ExtendedPluginFQN;
-import org.eclipse.che.api.workspace.shared.Constants;
 
 /**
  * Provision default editor if there is no any another editor and default plugins for it.
@@ -135,17 +134,20 @@ public class DefaultEditorProvisioner {
 
   /**
    * Provision the for async storage service, it will provide ability backup and restore project
-   * source using special storage. Will torn on only if workspace start in Ephemeral mode
-   * and has attribute  'asyncPersist = true'
+   * source using special storage. Will torn on only if workspace start in Ephemeral mode and has
+   * attribute 'asyncPersist = true'
    *
    * @param components The set of components currently present in the Devfile
    * @param contentProvider content provider for plugin references retrieval
    * @throws DevfileException - A DevfileException containing any caught InfrastructureException
    */
-  private void provisionAsyncStoragePlugin(List<ComponentImpl> components, FileContentProvider contentProvider) throws DevfileException {
+  private void provisionAsyncStoragePlugin(
+      List<ComponentImpl> components, FileContentProvider contentProvider) throws DevfileException {
     try {
-      Map<String, String> missingPluginsIdToRef = Collections.singletonMap(
-          componentFQNParser.getPluginPublisherAndName(asyncStoragePluginRef), asyncStoragePluginRef);
+      Map<String, String> missingPluginsIdToRef =
+          Collections.singletonMap(
+              componentFQNParser.getPluginPublisherAndName(asyncStoragePluginRef),
+              asyncStoragePluginRef);
       addMissingPlugins(components, contentProvider, missingPluginsIdToRef);
     } catch (InfrastructureException e) {
       throw new DevfileException(e.getMessage(), e);

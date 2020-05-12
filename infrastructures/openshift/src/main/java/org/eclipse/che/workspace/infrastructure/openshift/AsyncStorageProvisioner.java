@@ -71,8 +71,8 @@ public class AsyncStorageProvisioner {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncStorageProvisioner.class);
 
-  private final String     pvcName;
-  private final String     storageImage;
+  private final String pvcName;
+  private final String storageImage;
   private final SshManager sshManager;
   private final OpenShiftClientFactory clientFactory;
 
@@ -156,7 +156,8 @@ public class AsyncStorageProvisioner {
         sshPairs =
             singletonList(sshManager.generatePair(identity.getOwnerId(), "internal", SSH_KEY_NAME));
       } catch (ServerException | ConflictException e) {
-        LOG.warn("Unable to generate the SSH key for async storage service. Cause: {}", e.getMessage());
+        LOG.warn(
+            "Unable to generate the SSH key for async storage service. Cause: {}", e.getMessage());
         return null;
       }
     }
@@ -204,7 +205,10 @@ public class AsyncStorageProvisioner {
             .addToRequests("memory", new Quantity("256Mi"))
             .endResources()
             .withPorts(
-                new ContainerPortBuilder().withContainerPort(SERVICE_PORT).withProtocol("TCP").build())
+                new ContainerPortBuilder()
+                    .withContainerPort(SERVICE_PORT)
+                    .withProtocol("TCP")
+                    .build())
             .withVolumeMounts(storageVolumeMount, sshVolumeMount)
             .build();
 

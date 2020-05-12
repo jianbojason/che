@@ -65,7 +65,8 @@ public class DefaultEditorProvisionerTest {
   @Test
   public void shouldNotProvisionDefaultEditorIfItIsNotConfigured() throws Exception {
     // given
-    provisioner = new DefaultEditorProvisioner(null, new String[] {}, "", fqnParser, pluginFQNParser);
+    provisioner =
+        new DefaultEditorProvisioner(null, new String[] {}, "", fqnParser, pluginFQNParser);
     DevfileImpl devfile = new DevfileImpl();
 
     // when

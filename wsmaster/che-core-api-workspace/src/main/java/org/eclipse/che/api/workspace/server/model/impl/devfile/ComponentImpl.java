@@ -191,7 +191,7 @@ public class ComponentImpl implements Component {
       List<? extends Volume> volumes,
       List<? extends Env> env,
       List<? extends Endpoint> endpoints) {
-      //Lifecycle lifecycle) {
+    // Lifecycle lifecycle) {
     this.alias = alias;
     this.type = type;
     this.componentId = id;
