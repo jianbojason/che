@@ -26,6 +26,8 @@ import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.IntOrStringBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaimBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimVolumeSourceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
@@ -54,6 +56,7 @@ import org.eclipse.che.api.ssh.server.model.impl.SshPairImpl;
 import org.eclipse.che.api.ssh.shared.model.SshPair;
 import org.eclipse.che.api.workspace.server.spi.InfrastructureException;
 import org.eclipse.che.workspace.infrastructure.kubernetes.Names;
+import org.eclipse.che.workspace.infrastructure.kubernetes.namespace.KubernetesObjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +75,7 @@ public class AsyncStorageProvisioner {
   private static final Logger LOG = LoggerFactory.getLogger(AsyncStorageProvisioner.class);
 
   private final String pvcName;
+  private final String pvcQuantity;
   private final String storageImage;
   private final SshManager sshManager;
   private final OpenShiftClientFactory clientFactory;
@@ -79,10 +83,12 @@ public class AsyncStorageProvisioner {
   @Inject
   public AsyncStorageProvisioner(
       @Named("che.infra.kubernetes.pvc.name") String pvcName,
+      @Named("che.infra.kubernetes.pvc.quantity") String pvcQuantity,
       @Named("che.infra.kubernetes.async.storage.image") String image,
       SshManager sshManager,
       OpenShiftClientFactory openShiftClientFactory) {
     this.pvcName = pvcName;
+    this.pvcQuantity = pvcQuantity;
     this.storageImage = image;
     this.sshManager = sshManager;
     this.clientFactory = openShiftClientFactory;
@@ -212,12 +218,15 @@ public class AsyncStorageProvisioner {
             .withVolumeMounts(storageVolumeMount, sshVolumeMount)
             .build();
 
+    PersistentVolumeClaim pvc = KubernetesObjectUtil.newPVC(STORAGE_DATA,
+        "ReadWriteOnce", pvcQuantity);
+
     Volume storageVolume =
         new VolumeBuilder()
             .withName(STORAGE_DATA)
             .withPersistentVolumeClaim(
                 new PersistentVolumeClaimVolumeSourceBuilder()
-                    .withClaimName(pvcName)
+                    .withClaimName(pvc.getMetadata().getName())
                     .withReadOnly(false)
                     .build())
             .build();
