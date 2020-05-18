@@ -7,7 +7,7 @@
 # http://www.eclipse.org/legal/epl-v10.html
 
 function prepareCustomResourceFile() {
-  RELEASE_VERSION=7.12.1
+  RELEASE_VERSION=7.13.0
   echo "======== Patch custom-resource.yaml ========"
   cd /tmp
   wget https://raw.githubusercontent.com/eclipse/che-operator/$RELEASE_VERSION/deploy/crds/org_v1_che_cr.yaml -O custom-resource.yaml
@@ -26,8 +26,8 @@ function prepareCustomResourceFile() {
 }
 
 function installReleaseCheCtl() {
-  # 7.12.1 chectl
-  releaseChectlPackageUrl=https://github.com/che-incubator/chectl/releases/download/20200501092240/chectl-linux-x64.tar.gz
+  # 7.13.0 chectl
+  releaseChectlPackageUrl=https://github.com/che-incubator/chectl/releases/download/20200518075629/chectl-linux-x64.tar.gz
 
   cd /tmp
   wget ${releaseChectlPackageUrl} -O chectl-linux-x64.tar.gz
